@@ -1,0 +1,155 @@
+---
+title: "Reporte Clasificación Mensajes"
+author: "Antonia Aguilera"
+date: "10/Mayo/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(reticulate)
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(engine.path = list(
+  python = '/Users/antoniaaguilera/opt/anaconda3/bin/python3',
+  r = "/Library/Frameworks/R.framework/Resources"
+), root.dir= '/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/' )
+```
+
+```{python, echo=FALSE}
+import pandas as pd
+import os 
+df= pd.read_excel('/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/data/clean/messages_analysis.xlsx')
+
+```
+
+# Categorización
+```{python, echo=FALSE}
+x=len(df)
+unique = df.drop_duplicates(subset=['mail_from'])
+x_unique = len(unique)
+#`r format(as.numeric(count()), big.mark=",")`
+min_time = str(min(df['timestamp']).strftime("%d/%m/%Y")) 
+max_time = str(max(df['timestamp']).strftime("%d/%m/%Y"))
+```
+
+```{r, echo=FALSE}
+x<-py$x
+x_unique<-py$x_unique
+min_time <- py$min_time
+max_time<- py$max_time
+```
+
+Se analizaron `r format(as.numeric(x), big.mark=",")` mensajes recibidos de `r format(as.numeric(x_unique), big.mark=",")` correos únicos entre `r min_time` y `r max_time`. Para el proceso de clasificación se realizó una inspección visual de los mensajes y se procedió con la categorización en base a palabras claves que se lograron identificar. Si bien esta clasificación es perfectible, creo que es bastante exhaustiva.
+
+
+Las categorías son:
+
+
+- **Parents/Legal Guardians**
+- **Adult Education**
+- **Platform Contact**
+- **Service Providers**
+- **Looking for Jobs**
+- **Others**
+
+```{python, echo=FALSE}
+import plotly
+import plotly.express as px
+import plotly.graph_objects as go
+
+by_cat = df.groupby(["Category"])[['message']].count()
+by_cat['category'] = by_cat.index
+by_cat = by_cat.reset_index(drop=True)
+by_cat = by_cat.sort_values(by=['message'], ascending=True)
+plot_bycat = px.bar(by_cat, x="message", y="category", 
+        labels={"category": "Categoría", "message": "Nº Mensajes"})
+plot_bycat.show()
+```
+
+
+# Parents/Legal Guardians {.tabset}
+## Criterios
+Este corresponde al segmento más grande y agrupa a Apoderados que buscan información sobre el proceso de admisión. Los mensajes de este segmento se clasificaron en las siguientes sub-categorías (un mensaje puede estar en más de una sub-categoría):
+
+
+- **Consultas sobre vacantes disponibles**
+- **Consultas sobre los pasos a seguir para inicial el proceso de matrícula**
+- **Consultas sobre los requisitos para postular y matricularse**
+- **Consultas sobre los costos de matrícula y/o arancel**
+- **Consultas sobre mecanismos de traslado de un estudiante desde un establecimiento a otro**
+- **Consultas sobre lista de espera**
+- **Consultas sobre el horario de clases y/o proceso de admisión**
+
+Además, fue posible identificar el grado sobre el que se realiza la consulta para la mayoría de los mensajes. 
+
+```{python, echo=FALSE}
+parents = df[df['Category']=='Parent/Legal Guardian']
+x_parents = len(parents)
+parents = parents[['message', 'mail_from','grade', 'lg_busca_vacante', 'lg_busca_matricula', 'lg_busca_requisitos', 'lg_busca_costo', 'lg_lista_espera', 'lg_traslado', 'lg_pie', 'lg_horario']]
+parents_suma = pd.DataFrame(parents.sum(numeric_only=True))
+parents_suma['sub_category'] = parents_suma.index
+parents_suma = parents_suma.reset_index(drop=True)
+parents_suma = parents_suma.rename(columns={0:'n_mensajes'})
+```
+
+```{r, echo=FALSE }
+
+x_parents <- py$x_parents
+parents_suma <-py$parents_suma
+nombre <- rbind('busca_vacante' , 'busca_matricula', 'busca_requisitos', 'busca_costo', 'lista_espera', 'traslado', 'pie', 'horario')
+parents_suma$sub_cat <- nombre
+parents_suma <- parents_suma[order(-parents_suma$n_mensajes),]
+parents_suma <- parents_suma[, c(3,1)]
+
+kbl(parents_suma[1:2]) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+
+A continuación se muestra la distribución de los grados más consultados:
+```{python, echo=FALSE}
+by_grade = parents.groupby(["grade"])[['message']].count()
+by_grade['nivel'] = by_grade.index
+by_grade = by_grade.reset_index(drop=True)
+by_grade = by_grade.sort_values(by=['message'], ascending=True)
+plot_bygrade = px.bar(by_grade, x="message", y="nivel", 
+        labels={"nivel": "Nivel", "message": "Nº Menciones"})
+plot_bygrade.show()
+```
+
+## Ejemplos de Mensajes
+#### Busca Vacante
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/mail_example.png){width=40%}
+#### Busca Vacante
+
+## Respuestas Propuestas
+Se proponen las siguientes respuestas para los tipos de mensaje identificados:
+### Busca Vacantes
+Respuesta se gatilla cuando se identifica que el mensaje contiene:
+>
+
+
+
+# Adult Education {.tabset}
+## Criterios
+## Ejemplos de Mensajes
+## Respuestas Propuestas
+
+
+# Platform Contact {.tabset}
+## Criterios
+## Respuestas Propuestas
+## Ejemplos de Mensajes
+# Service Providers {.tabset}
+## Criterios
+## Respuestas Propuestas
+## Ejemplos de Mensajes
+# Looking For Jobs {.tabset}
+## Criterios
+## Respuestas Propuestas
+## Ejemplos de Mensajes
+
+# Others {.tabset}
+## Criterios
+## Respuestas Propuestas
+## Ejemplos de Mensajes

@@ -1,6 +1,6 @@
 """
 Created on Monday 28-03-2022
-Last Modified on Tuesday 10-05-2022
+Last Modified on Tuesday 12-05-2022
 @author: antoniaaguilera
 country: CHILE
 Objective: message classification for automatic answers
@@ -54,6 +54,8 @@ min(mime_all['date'])
 max(mime_all['date'])
 mime_all = mime_all[mime_all['origen']!='oldold']
 mime_all = mime_all.reset_index(drop=True)
+
+mime_all['msg_length'] = mime_all['message'].str.len()
 
 # ----------------------------------------------------------------------------------------- #
 # ----------------------------------- CLASSIFICATION -------------------------------------- #
@@ -135,6 +137,7 @@ traslado = 'traslado|trasladar|cambiar|cambio'
 pie = 'pie|autista|autismo|discapacidad auditiva|discapacidad visual|discapacidad intelectual|discapacidad múltiple|sordoceguera|disfasia'
 horario = 'horario de clases|horario'
 
+beca = 'beca'
 #busca vacante: verbo + vacante + hijo o curso
 mime_all['lg_busca_vacante'] = mime_all['message'].str.contains(verb) & mime_all['message'].str.contains(vacante) & (mime_all['message'].str.contains(kid)|mime_all['message'].str.contains(stage)|mime_all['message'].str.contains(age) )
 mime_all['lg_busca_vacante'] = np.where((mime_all['message'].str.contains(vacante)&mime_all['message'].str.contains(stage)), True,mime_all['lg_busca_vacante'])
@@ -195,17 +198,15 @@ mime_all['grade'] = np.where(mime_all['ae_adultos_media']==True  , 'Media Adulto
 # -------------------------- PLATFORM CONTACT -------------------------- #
 # ---------------------------------------------------------------------- #
 #sige
-update = 'agregar|agrego|agregó|actualizamos|actualicé|actualizó|actualizar|actualiza|cambiamos|cambié|cambió|cambiar|cambia|modificamos|modifiqué|modificó|modificar|modifica'
+update = 'agregar|agrego|agregó|actualizamos|actualicé|actualizó|actualizar|actualiza|cambiamos|cambié|cambió|cambiar|cambia|modificamos|modifiqué|modificó|modificar|modifica|encarga|encargue'
 sige_person = 'encargado|encargada'
 document = 'sige|pei'
 
-mime_all['pc_update'] = mime_all['message'].str.contains(update) & mime_all['message'].str.contains(document)
-mime_all['pc_error']  = mime_all['message'].str.contains('error') & mime_all['message'].str.contains(document)
+mime_all['pc_update'] = (mime_all['message'].str.contains(update)|mime_all['message'].str.contains('error')) & mime_all['message'].str.contains(document)
 mime_all['pc_sigeperson']  = mime_all['message'].str.contains(sige_person) & mime_all['message'].str.contains(document)
 
 
 mime_all['Category'] = np.where(mime_all['pc_update']==True, 'Platform Contact',mime_all['Category'])
-mime_all['Category'] = np.where(mime_all['pc_error']==True, 'Platform Contact',mime_all['Category'])
 mime_all['Category'] = np.where(mime_all['pc_sigeperson']==True, 'Platform Contact',mime_all['Category'])
 
 # ---------------------------------------------------------------------- #
@@ -213,9 +214,9 @@ mime_all['Category'] = np.where(mime_all['pc_sigeperson']==True, 'Platform Conta
 # ---------------------------------------------------------------------- #
 #preuniversitarios, cortinas, paseos
 offer = 'ofrezco|ofrecidos|ofrecido|ofrecer|ofrece|mostrar|mostrarles|presentar|presentarles|brindarle|disposición'
-services = 'servicios|servicio|propuesta|programa|programas|preuniversitario|consultor|consultores'
+services = 'servicios|servicio|propuesta|programa|programas|consultor|consultores'
 
-highered = 'universidad|ed superior|educación superior|educacion superior'
+highered = 'universidad|ed superior|educación superior|educacion superior|preuniversitario|pre universitario|pre-universitario'
 access = 'ingreso|admisión|difusión|acceso'
 
 mime_all['sp_offer']  = mime_all['message'].str.contains(offer) & mime_all['message'].str.contains(services)
@@ -229,11 +230,10 @@ mime_all['Category'] = np.where(mime_all['sp_highered']==True, 'Service Provider
 # ---------------------------------------------------------------------- #
 teacher = 'profesor|profesora|docente|educador|educadora|equipo docente|egresado|egresada|licenciada|licenciado'
 therapy =  'fonoaudióloga|fonoaudiologa|fonoaudiólogo|fonoaudiologo|psicóloga|psicologa|psicólogo|psicologo|kinesiologo|kinesiologa|kinesiólogo|kinesióloga'
-classroom_asistance = 'psicopedagogo|psicopedagoga|auxiliar|asistente|orientador|orientadora|inspector|inspectora'
-asistentes = 'psicopedagogo|psicopedagoga|auxiliar|asistente|orientado|orientadora|inspector|inspectora|bibliotecólogo|bibliotecóloga|bibliotecologo|bibliotecologa'
+classroom_asistance = 'psicopedagogo|psicopedagoga|auxiliar|asistente|orientador|orientadora|inspector|inspectora|bibliotecólogo|bibliotecóloga|bibliotecologo|bibliotecologa|utp'
 
 resume = 'cv|curriculum|curriculo|curriculum vitae|currículo|curriculo'
-job = 'trabajo|puesto de trabajo|oportunidad laboral|empleo|trabajar|integrarme a su equipo|requieren docentes|vacante laboral'
+job = 'trabajo|puesto de trabajo|oportunidad laboral|empleo|trabajar|integrarme a su equipo|requieren docentes|vacante laboral|adherirme al proyecto|entrevista'
 
 mime_all['jobs_teaching'] = mime_all['message'].str.contains(teacher) & (mime_all['message'].str.contains(job)|mime_all['message'].str.contains(resume))
 mime_all['jobs_therapy']  = mime_all['message'].str.contains(therapy) & (mime_all['message'].str.contains(job)|mime_all['message'].str.contains(resume))
@@ -247,9 +247,9 @@ mime_all['Category'] = np.where(mime_all['jobs_asistance']==True, 'Looking for J
 # ---------------------------------------------------------------------- #
 # ------------------------------ OTHERS -------------------------------- #
 # ---------------------------------------------------------------------- #
-students = 'soy estudiante|soy alumno|soy alumna'
-institution = 'universidad|instituto|pedagogía'
-internship = 'práctica|práctica profesional|proyecto de título|proyecto de titulo|trabajo'
+students = 'soy estudiante|soy alumno|soy alumna|exalumno|exalumna|ex-alumno|ex-alumno|ex alumna|ex alumno|realizar|hacer'
+institution = 'universidad|instituto|pedagogía|psicopedagogía|pedagogia|psicopedagogia'
+internship = 'práctica|práctica profesional|practica|practica profesional|proyecto de título|proyecto de titulo|cátedra|catedra|ramo'
 colision = 'colision|colisión|colisionado|colisionada'
 link = 'link|página web|pagina web|web'
 #necesito el contacto
@@ -267,9 +267,28 @@ mime_all['Category'] = np.where(mime_all['other_colision']==True , 'Other',mime_
 # ---------------------------------------------------------------------- #
 #mime_all['lg_busca_vacante'] = np.where(mime_all['Category']!='Parent/Legal Guardian', False ,mime_all['lg_busca_vacante'])
 
+#solicito beca
+mime_all['lg_busca_beca'] = mime_all['message'].str.contains(beca)
+mime_all['Category'] = np.where(mime_all['lg_busca_beca']==True, 'Parent/Legal Guardian',mime_all['Category'])
 
+
+# ----------------------------------------------------------------------------- #
+# --------------------------- MERGE CON RBD Y SECTOR -------------------------- #
+# ----------------------------------------------------------------------------- #
+campus = pd.read_csv("/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/Explorador_Chile/E_Escolar/latest_from_back/cb_explorer_chile_institutions_campus.csv")
+campus = campus[['institution_code', 'sector_id']]
+campus = campus.drop_duplicates(subset=['institution_code'])
+
+
+cross_walk = pd.read_stata("/Users/antoniaaguilera/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Explorador/Data/mixpanel_analysis_2022/crosswalk_schools_full.dta")
+df = mime_all.merge(cross_walk, how='left', on = 'school_id')
+
+df = df.merge(campus, how='left', on = 'institution_code')
+
+df
 # ---------------------------------------------------------------------- #
 # ----------------------------- SAVE FILE ------------------------------ #
 # ---------------------------------------------------------------------- #
 
-mime_all.to_excel(f'{save_path}/clean/messages_analysis.xlsx')
+
+df.to_excel(f'{save_path}/clean/messages_analysis.xlsx')

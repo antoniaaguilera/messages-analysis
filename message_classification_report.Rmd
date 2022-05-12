@@ -1,7 +1,7 @@
 ---
 title: "Reporte Clasificación Mensajes"
 author: "Antonia Aguilera"
-date: "10/Mayo/2022"
+date: "Mayo 2022"
 output: html_document
 ---
 
@@ -66,10 +66,47 @@ plot_bycat = px.bar(by_cat, x="message", y="category",
 plot_bycat.show()
 ```
 
+Con respecto a la extensión promedio de los mensajes:
+```{python, echo=FALSE}
+import plotly
+import plotly.express as px
+import plotly.graph_objects as go
+by_len = df.groupby(['Category'])[['msg_length']].mean()
+by_len['category'] = by_len.index
+by_len = by_len.reset_index(drop=True)
+by_len = by_len.sort_values(by=['msg_length'], ascending=True)
+
+plot_bylen = px.bar(by_len, x='msg_length', y='category',
+        labels={'category': "Categoría", 'msg_length': "Largo promedio de mensajes"})
+plot_bylen.update_traces(marker_color='orange')
+```
+
+Con respecto a la dependencia de los establecimientos:
+```{python, echo=FALSE}
+by_dep = df.groupby(['sector_id'])[['message']].count().reset_index()
+by_dep['porcentaje'] = 100*by_dep['message']/by_dep['message'].sum()
+by_dep['dependencia'] = ['Público', 'Subvencionado', 'Particular', 'CAD', 'SLE', 'Sin Información'] 
+by_dep = by_dep[0:5]
+by_dep = by_dep.sort_values(by=['porcentaje'], ascending=True)
+plot_bydep = px.bar(by_dep, x='porcentaje', y='dependencia',
+        labels={'dependencia': "Dependencia", 'porcentaje': "% de mensajes"})
+plot_bydep.update_traces(marker_color='green')
+```
 
 # Parents/Legal Guardians {.tabset}
+```{python, echo=FALSE}
+parents = df[df['Category']=='Parent/Legal Guardian']
+x_parents = len(parents)
+unique_parents = len(parents.drop_duplicates(subset=['mail_from']))
+```
+
+```{r, echo=FALSE}
+x_parents <- py$x_parents
+unique_parents <-py$unique_parents
+```
+
 ## Criterios
-Este corresponde al segmento más grande y agrupa a Apoderados que buscan información sobre el proceso de admisión. Los mensajes de este segmento se clasificaron en las siguientes sub-categorías (un mensaje puede estar en más de una sub-categoría):
+Este corresponde al segmento más grande (`r format(as.numeric(x_parents), big.mark=",")` mensajes, `r format(as.numeric(unique_parents), big.mark=",")` correos únicos) y agrupa a Apoderados que buscan información sobre el proceso de admisión. Los mensajes de este segmento se clasificaron en las siguientes sub-categorías (un mensaje puede estar en más de una sub-categoría):
 
 
 - **Consultas sobre vacantes disponibles**
@@ -79,29 +116,22 @@ Este corresponde al segmento más grande y agrupa a Apoderados que buscan inform
 - **Consultas sobre mecanismos de traslado de un estudiante desde un establecimiento a otro**
 - **Consultas sobre lista de espera**
 - **Consultas sobre el horario de clases y/o proceso de admisión**
+- **Consultas sobre becas**
 
 Además, fue posible identificar el grado sobre el que se realiza la consulta para la mayoría de los mensajes. 
 
 ```{python, echo=FALSE}
-parents = df[df['Category']=='Parent/Legal Guardian']
-x_parents = len(parents)
-parents = parents[['message', 'mail_from','grade', 'lg_busca_vacante', 'lg_busca_matricula', 'lg_busca_requisitos', 'lg_busca_costo', 'lg_lista_espera', 'lg_traslado', 'lg_pie', 'lg_horario']]
+parents = parents[['message', 'mail_from','grade', 'lg_busca_vacante', 'lg_busca_matricula', 'lg_busca_requisitos', 'lg_busca_costo', 'lg_lista_espera', 'lg_traslado', 'lg_pie', 'lg_horario', 'lg_busca_beca']]
 parents_suma = pd.DataFrame(parents.sum(numeric_only=True))
-parents_suma['sub_category'] = parents_suma.index
-parents_suma = parents_suma.reset_index(drop=True)
+parents_suma['sub_category'] = ['busca_vacante' , 'busca_matricula', 'busca_requisitos', 'busca_costo', 'lista_espera', 'traslado', 'pie', 'horario', 'busca_becas']
+parents_suma = parents_suma.set_index(['sub_category'])
 parents_suma = parents_suma.rename(columns={0:'n_mensajes'})
 ```
 
 ```{r, echo=FALSE }
-
-x_parents <- py$x_parents
 parents_suma <-py$parents_suma
-nombre <- rbind('busca_vacante' , 'busca_matricula', 'busca_requisitos', 'busca_costo', 'lista_espera', 'traslado', 'pie', 'horario')
-parents_suma$sub_cat <- nombre
-parents_suma <- parents_suma[order(-parents_suma$n_mensajes),]
-parents_suma <- parents_suma[, c(3,1)]
-
-kbl(parents_suma[1:2]) %>%
+parents_suma <-parents_suma[order(-parents_suma$n_mensajes),, drop = FALSE]
+kbl(parents_suma) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
 ```
 
@@ -117,39 +147,479 @@ plot_bygrade = px.bar(by_grade, x="message", y="nivel",
 plot_bygrade.show()
 ```
 
-## Ejemplos de Mensajes
-#### Busca Vacante
-![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/mail_example.png){width=40%}
-#### Busca Vacante
+Con respecto a la dependencia de los establecimientos:
+```{python, echo=FALSE}
+parents_depe = df[df['Category']=='Parent/Legal Guardian']
+parents_depe = parents_depe[['message', 'sector_id']]
+by_dep_parents = parents_depe.groupby(['sector_id'])[['message']].count().reset_index()
+by_dep_parents['porcentaje'] = 100*by_dep_parents['message']/by_dep_parents['message'].sum()
+by_dep_parents['dependencia'] = ['Público', 'Subvencionado', 'Particular', 'CAD', 'SLE', 'Sin Información'] 
+by_dep_parents = by_dep_parents[0:5]
+by_dep_parents = by_dep_parents.sort_values(by=['porcentaje'], ascending=True)
+plot_dep_parents = px.bar(by_dep_parents, x='porcentaje', y='dependencia',
+        labels={'dependencia': "Dependencia", 'porcentaje': '% de mensajes'})
+plot_dep_parents.update_traces(marker_color='green')
+```
 
-## Respuestas Propuestas
-Se proponen las siguientes respuestas para los tipos de mensaje identificados:
-### Busca Vacantes
-Respuesta se gatilla cuando se identifica que el mensaje contiene:
+## Ejemplos de Mensajes
+### Busca Vacante
+- Apoderado que no sabe si existen vacantes, puede que explicite o no el nivel y puede que pregunte por varios niveles a la vez.
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex1.png){width=100%}
 >
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex2.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex3.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex4.png){width=100%}
 
 
+### Busca Matrícula
+- Apoderados que saben que hay vacantes disponibles y que pretenden iniciar el proceso de inscripción del estudiante.
 
-# Adult Education {.tabset}
-## Criterios
-## Ejemplos de Mensajes
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex5.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex6.png){width=100%}
+
+- Apoderados que pretenden iniciar el proceso de postulación:
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex7.png){width=100%}
+
+### Está en lista de espera
+
+- Apoderados que saben que están en lista de espera:
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex10.png){width=100%}
+
+- Apoderados que piden un cupo en lista de espera:
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex11.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex12.png){width=100%}
+
+### Busca Información sobre requisitos
+- Apoderados que explícitamente preguntan por documentos.
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex8.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex9.png){width=100%}
+
+### Busca Información sobre costos/horarios
+
+- Apoderados que explícitamente preguntan por documentos.
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_ex13.png){width=100%}
+
+### Busca Becas
+
+- Solicitud sobre información de becas (adicional al proceso de matrícula)
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_becas_ex1.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/lg_becas_ex2.png){width=100%}
+
+
 ## Respuestas Propuestas
+Se proponen las siguientes respuestas para los tipos de mensaje identificados.
 
 
-# Platform Contact {.tabset}
-## Criterios
-## Respuestas Propuestas
-## Ejemplos de Mensajes
+### Busca Vacantes
+
+
+- Apoderado que no sabe si hay vacantes. Si no se puede identificar el curso por el que pregunta, dos opciones:
+
+
+
+>`r text_spec("**R1:** ¡Hola! Notamos que estás consultando por vacantes en este establecimiento, estos son los niveles con vacantes disponibles: {{vacantes_disponibles}}", background= "#CFD3D5")` 
+
+
+>`r text_spec("**R2:** ¡Hola! Notamos que estás consultando por vacantes en este establecimiento, ¿en qué nivel estás interesado? {{listado_niveles}}", background= "#CFD3D5")` *(Acá tomar en cuenta que pueden preguntar por más de un nivel)*
+
+- Apoderado que no sabe si hay vacantes. Sí es posible identificar el nivel:
+
+>`r text_spec("**R1:** ¡Hola! En este momento existen {{n_vacantes}} vacantes disponibles en {{nivel_identificado}}. Si estás interesado en esta vacante, debes inscribirte en el siguiente link/llamar al siguiente número/: {{}}", background= "#CFD3D5")`
+
+>`r text_spec("**R1.1:** ¡Hola! Lamentablemente no existen vacantes disponibles para {{nivel_identificado}} en este establecimiento. {{Sugerir listado de establecimientos donde sí hay?}}", background= "#CFD3D5")`
+
+
+
+### Busca Matrícula
+
+- Apoderado que sabe que hay cupos y quiere iniciar el proceso. Dar instrucciones concretas sobre los pasos a seguir, se le puede redirigir al contenido de la tabla `requirements` y a la página de inscripción.
+
+
+>`r text_spec("**R1:** ¡Hola! En este momento existen {{n_vacantes}} vacantes disponibles en {{nivel_identificado}}. Si estás interesado en esta vacante, debes inscribirte en el siguiente link/llamar al siguiente número/: {{contact}}", background= "#CFD3D5")`
+
+>`r text_spec("**R2:** ¡Hola! En este momento existen {{n_vacantes}} vacantes disponibles en {{nivel_identificado}}. Para conocer los requisitos de postulación haz click acá: {{requirements}}", background= "#CFD3D5")`
+ 
+### Está en lista de espera 
+
+- Apoderado está confirmado en lista de espera oficial o se inscribió en el establecimiento (*delicado, ya que requiere un poco más de urgencia*)
+
+>`r text_spec("**R1:** ¡Hola! Si te encuentras en lista de espera y recibiste un correo de MINEDUC informando que tienes el cupo, debes descargar tu certificado SAE en el siguiente link:{{link}}. Luego, seguir los siguientes pasos...", background= "#CFD3D5")`
+
+
+- Apoderado quiere entrar a la lista de espera
+
+>`r text_spec("**R1:** ¡Hola! En este momento existen {{n_vacantes}} vacantes disponibles en {{nivel_identificado}}. Si estás interesado en esta vacante, debes inscribirte en el siguiente link/llamar al siguiente número/: {{contact}}", background= "#CFD3D5")`
+
+>`r text_spec("**R1.1:** ¡Hola! Lamentablemente no existen vacantes disponibles para {{nivel_identificado}} en este establecimiento. {{Sugerir listado de establecimientos donde sí hay?}}", background= "#CFD3D5")`
+
+
+### Busca Información sobre requisitos
+
+- Apoderado que explícitamente busca requisitos y no consulta por otra información.
+
+>`r text_spec("**R1:** ¡Hola! Los requisitos de postulación para el establecimiento {{school_name}} son los siguientes: {{requirements}}.", background= "#CFD3D5")`
+
+
+- Apoderado que explícitamente busca requisitos de postulación. Confirmar vacantes, entregarle requisitos y pasos a seguir.
+
+>`r text_spec("**R2:** ¡Hola! En este momento existen {{n_vacantes}} vacantes disponibles en {{nivel_identificado}}. Los requisitos de postulación se pueden encontrar aquí :{{requirements}}. Para inscribirte en el siguiente link/llamar al siguiente número/: {{contact}}", background= "#CFD3D5")`
+
+### Busca Información sobre costos/horarios/becas
+
+>`r text_spec("**R1:** Notamos que estás buscando información sobre costos/horarios/becas disponibles de este establecimiento, puedes encontrarlos acá: {{payments}}/{{horarios}}/{{scholarships}}.", background= "#CFD3D5")`
+
+
 # Service Providers {.tabset}
 ## Criterios
-## Respuestas Propuestas
-## Ejemplos de Mensajes
-# Looking For Jobs {.tabset}
-## Criterios
-## Respuestas Propuestas
+
+
+```{python, echo=FALSE}
+providers = df[df['Category']=='Service Provider']
+
+x_providers = len(providers)
+unique_providers = len(providers.drop_duplicates(subset=['mail_from']))
+providers = providers[['message', 'mail_from','grade', 'sp_offer', 'sp_highered']]
+providers = pd.DataFrame(providers.sum(numeric_only=True))
+providers['sub_category'] = ['Bienes y Servicios' , 'Educación Superior']
+providers = providers.set_index(['sub_category'])
+providers = providers.rename(columns={0:'n_mensajes'})
+```
+
+```{r, echo=FALSE }
+x_providers <- py$x_providers
+unique_providers <-py$unique_providers
+providers <- py$providers
+by_len<-py$by_len
+```
+
+
+Este corresponde al segundo segmento más grande (`r format(as.numeric(x_providers), big.mark=",")` mensajes, `r format(as.numeric(unique_providers), big.mark=",")` correos únicos). Los mensajes de esta categoría son los más largos (`r format(as.numeric(by_len$msg_length[6], 1), big.mark=",")` palabras por mensaje en promedio), ya que se describen los servicios ofrecidos en detalle. Se clasificaron los mensajes en dos categorías:
+
+
+- **Ofertas sobre bienes y servicios:** servicios de yoga, cortinas, transporte para paseos, paseos al planetario, etc.
+- **Preparación Educación Superior:** principalmente por parte de universidades, institutos y preuniversitarios.
+
+
+```{r, echo=FALSE }
+kbl(providers) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+```{python, echo=FALSE}
+provider_depe = df[df['Category']=='Service Provider']
+provider_depe = provider_depe[['message', 'sector_id']]
+by_dep_provider = provider_depe.groupby(['sector_id'])[['message']].count().reset_index()
+by_dep_provider['porcentaje'] = 100*by_dep_provider['message']/by_dep_provider['message'].sum()
+by_dep_provider['dependencia'] = ['Público', 'Subvencionado', 'Particular', 'CAD', 'SLE'] 
+by_dep_provider = by_dep_provider.sort_values(by=['porcentaje'], ascending=True)
+plot_dep_provider = px.bar(by_dep_provider, x='porcentaje', y='dependencia',
+        labels={'dependencia': "Dependencia", 'porcentaje': "% de mensajes"})
+plot_dep_provider.update_traces(marker_color='green')
+```
+
 ## Ejemplos de Mensajes
 
-# Others {.tabset}
-## Criterios
+### Oferta de bienes y servicios
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_offer_ex1.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_offer_ex2.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_offer_ex3.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_offer_ex4.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_offer_ex5.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_offer_ex6.png){width=100%}
+
+### Preparación Educación Superior
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_highered_ex1.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_highered_ex2.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_highered_ex3.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/sp_highered_ex4.png){width=100%}
+
 ## Respuestas Propuestas
+
+### Oferta de Bienes y Servicios
+
+>`r text_spec("**R1:** ¡Hola! Notamos que estás ofreciendo un servicio a este establecimiento, ¿deseas crear un perfil de *service provider*? Este perfil te permitirá acceder a un servicio de mensajería......", background= "#CFD3D5")`
+
+### Preparación Educación Superior
+
+>`r text_spec("**R1:** ¡Hola! Notamos que estás ofreciendo un servicio a este establecimiento, ¿deseas crear un perfil de *service provider*? Este perfil te permitirá acceder a un servicio de mensajería......", background= "#CFD3D5")`
+
+>`r text_spec("**R2:** ¡Hola! Notamos que estás ofreciendo un servicio de preparación de la educación superior a este establecimiento. Si lo deseas, puedes contactar directamente al encargado de educación superior en el siguiente correo {{contact}}", background= "#CFD3D5")`
+
+
+# Looking For Jobs {.tabset}
+
+```{python, echo=FALSE}
+jobs = df[df['Category']=='Looking for Jobs']
+x_jobs = len(jobs)
+unique_jobs = len(jobs.drop_duplicates(subset=['mail_from']))
+jobs = jobs[['message', 'mail_from','grade', 'jobs_teaching', 'jobs_therapy', 'jobs_asistance']]
+jobs = pd.DataFrame(jobs.sum(numeric_only=True))
+jobs['sub_category'] = ['Puestos de Docencia' , 'Terapeutas', 'Asistentes de la Educación']
+jobs = jobs.set_index(['sub_category'])
+jobs = jobs.rename(columns={0:'n_mensajes'})
+```
+
+```{r, echo=FALSE }
+x_jobs <- py$x_jobs
+unique_jobs <-py$unique_jobs
+jobs <- py$jobs
+```
+
+
+
+
+## Criterios
+Un segmento no menor de mensajes están enfocados a la búsqueda de trabajo (`r format(as.numeric(x_jobs), big.mark=",")` mensajes, `r format(as.numeric(unique_jobs), big.mark=",")` correos únicos). Es la segunda categoría de mensajes más extensa (`r format(as.numeric(by_len$msg_length[5]), big.mark=",")` palabras por mensaje, en promedio). Se clasificaron los mensajes en las siguientes categorías:
+
+
+- **Puestos de docencia:** personas que se identificaban como docentes, profesores, educadoras diferenciales, etc.
+- **Puestos de terapeutas:** personas que buscaban empleo como fonoaudiólogo/a o psicólogo/a.
+- **Puestos de asistentes de la educación**: personas que buscaban empleo como psicopedagogo/a, auxiliar, orientador/ra, inspector/ra o bibliotecólogo/a.
+
+```{r, echo=FALSE }
+kbl(jobs) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+Con respecto a la dependencia de los establecimientos:
+```{python, echo=FALSE}
+jobs_depe = df[df['Category']=='Looking for Jobs']
+jobs_depe = jobs_depe[['message', 'sector_id']]
+by_dep_jobs = jobs_depe.groupby(['sector_id'])[['message']].count().reset_index()
+by_dep_jobs['porcentaje'] = 100*by_dep_jobs['message']/by_dep_jobs['message'].sum()
+by_dep_jobs['dependencia'] = ['Público', 'Subvencionado', 'Particular', 'CAD', 'SLE'] 
+by_dep_jobs = by_dep_jobs.sort_values(by=['porcentaje'], ascending=True)
+plot_dep_jobs = px.bar(by_dep_jobs, x='porcentaje', y='dependencia',
+        labels={'dependencia': "Dependencia", 'porcentaje': '% de mensajes'})
+plot_dep_jobs.update_traces(marker_color='green')
+
+```
+
 ## Ejemplos de Mensajes
+
+### Puestos de docencia
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/jobs_teaching_ex1.png){width=100%}
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/jobs_teaching_ex2.png){width=100%}
+
+
+### Puestos de terapeutas
+
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/jobs_therapy_ex1.png){width=100%}
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/jobs_therapy_ex2.png){width=100%}
+
+
+### Puestos de asistentes a la educación
+
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/jobs_assistance_ex1.png){width=100%}
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/jobs_assistance_ex2.png){width=100%}
+
+## Respuestas Propuestas
+
+- Se debe identificar el tipo de cargo al que se está intentando postular.
+
+>`r text_spec("**R1:** ¡Hola! Notamos que estás buscando empleo como {{profesion}}, ¿deseas crear un perfil *profesional* ? Este perfil te permitirá acceder a un servicio de mensajería......", background= "#CFD3D5")`
+
+>`r text_spec("**R2:** ¡Hola! Notamos que estás buscando empleo {{profesion}}. Si lo deseas, puedes contactarte directamente con el encargado de contrataciones en el siguiente correo: {{contact}}", background= "#CFD3D5")`
+
+# Platform Contact {.tabset}
+```{python, echo=FALSE}
+platform = df[df['Category']=='Platform Contact']
+x_platform = len(platform)
+unique_platform = len(platform.drop_duplicates(subset=['mail_from']))
+platform = platform[['message', 'mail_from','grade', 'pc_update', 'pc_sigeperson']]
+platform = pd.DataFrame(platform.sum(numeric_only=True))
+platform['sub_category'] = ['Update Perfil' , 'Encargados SIGE']
+platform = platform.set_index(['sub_category'])
+platform = platform.rename(columns={0:'n_mensajes'})
+```
+
+```{r, echo=FALSE }
+x_platform <- py$x_platform
+unique_platform <-py$unique_platform
+platform <- py$platform
+```
+
+
+
+## Criterios
+Se encontraron `r format(as.numeric(x_platform), big.mark=",")` mensajes, `r format(as.numeric(unique_platform), big.mark=",")` correos únicos. Muchos mensajes de este tipo se envían directamente a `contact@consiliumbots.com` Se clasificaron los mensajes en las siguientes categorías:
+
+
+- **Update Perfil:** se señala que existe información en SIGE que no está actualizada en el perfil o que existen inconsistencias entre esta plataforma y el explorador.
+- **Encargado SIGE:** persona que se identifica como encargado SIGE del establecimiento y requiere actualizar información, o persona que requiere contactar al encargado/a SIGE del establecimiento al que escribe.
+
+```{r, echo=FALSE }
+kbl(platform) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+
+## Ejemplos de Mensajes
+
+### Update Perfil
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/pc_update_ex1.png){width=100%}
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/pc_update_ex2.png){width=100%}
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/pc_update_ex3.png){width=100%}
+
+### Encargado SIGE
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/pc_encargadosige_ex1.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/pc_encargadosige_ex2.png){width=100%}
+
+
+## Respuestas Propuestas
+
+### Update Perfil
+
+- Si se identifica como *staff* el mensaje se envía a `contact@consiliumbots.com`
+
+>`r text_spec("**R1:** ¡Hola! Notamos que estás intentando actualizar la información del perfil digital de este establecimiento. En este link {{link}} podrás crear tu perfil de *administrador*, con el cuál podrás actualizar la información de tu establecimiento de forma fácil y rápida.", background= "#CFD3D5")`
+
+
+### Encargado SIGE
+>`r text_spec("**R1:** ¡Hola! Notamos que estás intentando contactar al encargado SIGE del establecimiento {{school_name}}. Si lo deseas, puedes contactarlo directamente en este correo: {{contact}}.", background= "#CFD3D5")`
+
+# Adult Education {.tabset}
+
+## Criterios
+Es posible identificar los estudiantes de educación adulta, ya que se identifican como tal. La mayoría de los mensajes preguntan sobre vacantes para enseñanza media. A diferencia de la Ed. Regular de niños y jóvenes, los mensajes especifican el horario (por ej: vacantes en horario vespertino.)
+
+```{python, echo=FALSE}
+adults = df[df['Category']=='Adult Education']
+adults = adults[['message', 'mail_from','grade']]
+
+by_adults= adults.groupby(["grade"])[['message']].count()
+by_adults = by_adults.rename(columns={'message':'grade'})
+```
+
+```{r, echo=FALSE}
+adults=py$by_adults
+kbl(adults) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+
+## Ejemplos de Mensajes
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/adults_ex1.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/adults_ex2.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/adults_ex3.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/adults_ex4.png){width=100%}
+
+
+## Respuestas Propuestas
+
+- Se identifica el nivel de enseñanza por el que se está preguntando, y se debe acompañar la oferta de vacantes con el horario.
+
+>`r text_spec("**R1:** ¡Hola! Notamos que estás buscando vacantes para enseñanza {{stage}}. Estas son las vacantes disponibles en este establecimiento: {{vacantes_por_horario}}", background= "#CFD3D5")`
+
+>`r text_spec("**R2:** ¡Hola! Notamos que estás buscando vacantes para educación de adultos. Estas son las vacantes disponibles en este establecimiento: {{vacantes_por_horario}}", background= "#CFD3D5")` 
+
+
+# Others {.tabset}
+```{python, echo=FALSE}
+other = df[df['Category']=='Other']
+x_other = len(other)
+unique_other = len(other.drop_duplicates(subset=['mail_from']))
+other = other[['message', 'mail_from','grade', 'other_internship', 'other_colision']]
+other = pd.DataFrame(other.sum(numeric_only=True))
+other['sub_category'] = ['Práctica o Proyecto de título' , 'Alumnos en colisión']
+other = other.set_index(['sub_category'])
+other = other.rename(columns={0:'n_mensajes'})
+```
+
+```{r, echo=FALSE }
+x_other <- py$x_other
+unique_other <-py$unique_other
+other <- py$other
+```
+
+## Criterios
+Los mensajes clasificados como 'otros' (`r format(as.numeric(x_other), big.mark=",")` mensajes, `r format(as.numeric(unique_other), big.mark=",")` correos únicos) se clasificaron en dos categorías principales:
+
+
+- **Practica Profesional/Proyecto de título:** estudiantes de pedagogía que desean realizar su práctica profesional en el establecimiento o estudiantes de otras carreras que desean llevar a cabo su proyecto de título.
+- **Alumnos en colisión:** cuando un estudiante está matriculado en más de un establecimiento, se dice que está el *colisión*. Establecimientos se comunican entre sí a través del **MIME** para obtener información sobre estos alumnos.
+
+```{r, echo=FALSE }
+kbl(other) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+
+## Ejemplos de Mensajes
+
+### Práctica Profesional/Proyecto de título
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/other_practica_ex1.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/other_practica_ex2.png){width=100%}
+
+### Alumnos en Colisión
+
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/other_colision_ex1.png){width=100%}
+>
+>
+>![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/examples/other_colision_ex2.png){width=100%}
+
+
+## Respuestas Propuestas
+
+### Práctica Profesional/Proyecto de título
+
+>`r text_spec("**R1:** ¡Hola! Notamos que quieres realizar tu práctica profesional en este establecimiento. Si lo deseas, puedes contactarte directamente con el encargado de contrataciones en el siguiente correo: {{contact}}", background= "#CFD3D5")`
+
+### Alumnos en Colisión
+
+>`r text_spec("**R1:** ¡Hola! Notamos que estás intentando contactar al establecimiento sobre alumnos en colisión. Si lo deseas, puedes contactarte directamente con el encargado de asistencia en el siguiente correo: {{contact}}", background= "#CFD3D5")`
+

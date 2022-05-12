@@ -1,0 +1,104 @@
+---
+title: "Seguimiento Mensajes MIME"
+author: "Antonia Aguilera"
+date: "Mayo 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime')
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(knitr)
+```
+
+```{r , include=FALSE}
+library(tidyverse)
+mensajes <- read_excel("./data/clean/mime_respuestas.xlsx")
+mensajes <- mensajes %>% drop_na(message)
+logs <- read.csv("./data/logs/logs_agregado.csv")
+logs <- logs[1:14,]
+palabras <- read_excel("./data/clean/freq_palabras.xlsx")
+```
+## Encuesta
+
+Se envió el siguiente correo a `r format(as.numeric(logs$Delivered[1]), big.mark=",")` personas que enviaron un mensaje a un establecimiento a través de la plataforma **MIME**. Se les dio la posibilidad de responder mediante el [google forms](https://docs.google.com/forms/d/e/1FAIpQLSffhokbyBuRb3nUO7dZ21ccyRnY-SaWDkgjIv67eCuZq8cjUQ/viewform) o respondiendo directamente el correo. La encuesta contaba de dos preguntas.
+
+<center>
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/mail_example.png){width=40%}![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/mensajes_mime/survey.png){width=50%}
+
+</center>
+
+## Estadísticas de envío
+Para el total de `r format(as.numeric(logs$Delivered[1]), big.mark=",")` envíos, la tasa de apertura fue de un `r logs$Daily.Unique.Open.Rate[1]` (`r format(as.numeric(sum(logs$Unique.Opens)), big.mark=",")` aperturas únicas). A continuación se muestra la cantidad de aperturas por día:
+```{r, echo=FALSE, out.width="50%", fig.align='center'}
+logs$Date <- logs$Date %>% as.Date("%m/%d/%y") %>% format( format="%m-%d")
+aperturas<-ggplot(logs, aes(x=Date, y=Unique.Opens, group=1)) + geom_line() + xlab("") + ylab("Correos abiertos") +theme_classic(base_size = 15) +
+  ylim(c(0,6400)) + theme(axis.text.x = element_text(angle = 70, vjust=0.4)) 
+aperturas
+```
+
+Se recibieron `r format(as.numeric(count(mensajes)), big.mark=",")`, lo que da una **tasa de respuestas del `r format(round(as.numeric(count(mensajes)/as.numeric(logs$Delivered[1])*100),2), big.mark=",")`%.**
+
+
+## Resultados
+Se recibieron `r format(as.numeric(count(mensajes)), big.mark=",")` respuestas hasta el 3 de mayo, donde se obtuvieron los siguientes resultados:
+```{r, echo=FALSE}
+
+kable(mensajes %>% 
+    count(recibio = factor(recibio)))
+mensajes$demora[mensajes$demora=="."]<-NA
+kable(
+mensajes %>%drop_na(demora) %>% 
+    count(demora = factor(demora)))
+```
+
+
+```{r , echo=FALSE, out.width="50%", figures-side}
+
+mensajes <- within(mensajes, demora <- factor(demora, levels=names(sort(table(demora), decreasing=TRUE))))
+
+
+recibio_plot<-ggplot(mensajes, aes(factor(recibio))) +
+  geom_bar(fill="steelblue", aes(y = (..count..)/sum(..count..)*100)) + xlab("") + ylab("%") +
+  theme_classic(base_size = 20) + coord_flip() +
+  geom_text(aes( label = format((..count..)/sum(..count..)*100, digits=4, drop0trailing=TRUE), 
+                 y= (..count..)/sum(..count..)*100), stat= "count", vjust = 0.5, hjust=-0.05, size=6) 
+ recibio_plot 
+  
+demora_plot<-mensajes %>% drop_na(demora) %>% 
+  ggplot( aes(x = factor(demora))) + 
+  geom_bar(fill="steelblue", aes(y = (..count..)/sum(..count..)*100)) + xlab("") +ylab("%") +
+  theme_classic(base_size = 20) + coord_flip() +
+  geom_text(aes( label = format((..count..)/sum(..count..)*100, digits=3, drop0trailing=TRUE), 
+                 y= (..count..)/sum(..count..)*100), stat= "count", vjust = 0.5, hjust=-0.05, size=5) + ylim(c(0,50))
+
+
+ demora_plot
+```
+
+### Mensajes Respondidos
+```{r , echo=FALSE, out.width="50%"}
+positiva <- subset(mensajes, recibio == "SI", select=c(message,recibio, school_name, contact_type, message_token, is_teacher, is_provider, fono, psico))
+```
+De las `r format(as.numeric(count(positiva)), big.mark=",")` respuestas positivas, se identificó 1 como enviada por docente y 1 enviada por proveedor. Hubo 21 establecimientos que respondieron a más de un mensaje, estos son:
+
+```{r , echo=FALSE, out.width="50%"}
+colegios <- positiva %>%count(colegios = factor(school_name))
+colegios <- colegios[order(-colegios$n),]
+kable(colegios[1:21,])
+```
+Las palabras más utilizadas en los mensajes respondidos son:
+
+
+```{r , echo=FALSE, out.width="50%", fig.align='center'}
+palabras <- palabras[order(-palabras$Frecuencia),]
+
+freq <- palabras[1:20,] %>% ggplot(aes(x=reorder(factor(palabra), -Frecuencia), y=Frecuencia)) + geom_bar(fill="steelblue", stat="identity") + theme_classic(base_size = 20) +  theme(axis.text.x = element_text(angle = 90, )) + xlab("")
+
+
+freq
+```
